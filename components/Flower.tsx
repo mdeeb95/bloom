@@ -138,8 +138,9 @@ export const Flower: React.FC<FlowerProps> = ({
   }, [interactionState, suspensePetalId]);
 
   // Dynamic scaling to keep flower on screen
+  // More aggressive dampening (0.15) to keep it smaller on screen as rings increase
   const baseScale = useMemo(() => 
-    Math.min(10.0, 1.5 / (0.8 + rings.length * 0.1)),
+    Math.min(10.0, 1.5 / (0.7 + rings.length * 0.15)),
   [rings.length]);
 
   return (
@@ -193,14 +194,21 @@ export const Flower: React.FC<FlowerProps> = ({
         {rings.map((ring, ringIndex) => {
           const isCurrentRing = ringIndex === rings.length - 1;
           
+          // "Shrink in harder" logic:
+          // Inner rings scale down more as outer rings are added.
+          // This pulls them inward and makes them smaller, creating room for outer growth.
+          const ringsFromOutermost = rings.length - 1 - ringIndex;
+          const ringScale = Math.max(0.4, 1 - (ringsFromOutermost * 0.12));
+          
           return (
             <div 
               key={ring.id}
               ref={(el) => { if (el) ringsRef.current.set(ring.id, el); }}
-              className="absolute top-1/2 left-1/2 w-0 h-0"
+              className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-1000 ease-in-out"
               style={{ 
                 zIndex: 90 - ringIndex,
-                transform: `rotate(${ring.rotationOffset}deg)` 
+                // Apply the combined rotation and dynamic ring-specific scaling
+                transform: `rotate(${ring.rotationOffset}deg) scale(${ringScale})` 
               }}
             >
               {ring.petals.map((petal) => {
@@ -240,7 +248,7 @@ export const Flower: React.FC<FlowerProps> = ({
                       style={{
                         backgroundColor: petal.color,
                         // Pointy top-left corner will point straight out
-                        // Changed 0% to 12% to make the tip slightly rounded
+                        // Rounded slightly (12%) as per previous request
                         borderRadius: '12% 100% 100% 100%', 
                         // Rotate 45deg so the top-left corner (the point) faces UP (outwards)
                         transform: 'rotate(45deg)', 

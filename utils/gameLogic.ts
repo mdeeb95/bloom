@@ -63,13 +63,15 @@ export const getRingConfig = (level: number) => {
 
   // Calculate radius: Rings go further out and stack less
   // We calculate it cumulatively based on the size of previous petals
-  let radius = 35; // Start radius (outside the center circle)
+  // Reduced starting radius (from 35 to 30) to keep it tighter to center
+  let radius = 30; 
   
   // Visibility factor: How much of the petal is visible (not covered by previous ring)
+  // Reduced visibility factor (from 0.6+ to 0.45+) to pull rings closer together
+  // and account for the shrinking of inner rings in the UI.
   for (let i = 1; i < level; i++) {
     const currentSize = basePetalSize + (i - 1) * sizeGrowthPerLevel;
-    // As levels increase, we increase the visibility factor slightly
-    const visibilityFactor = Math.min(0.6 + (i * 0.05), 0.9);
+    const visibilityFactor = Math.min(0.45 + (i * 0.04), 0.7);
     radius += currentSize * visibilityFactor;
   }
   
