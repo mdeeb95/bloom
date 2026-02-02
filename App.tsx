@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, InteractionState, RingData, PetalData } from './types';
-import { generateRoundColors, getRingConfig } from './utils/gameLogic';
+import { generateRoundColors, getRingConfig, ANIMATION_CONFIG } from './utils/gameLogic';
 import { Flower } from './components/Flower';
+import { soundManager } from './utils/soundManager';
 import gsap from 'gsap';
 
 export default function App() {
@@ -11,9 +12,14 @@ export default function App() {
   const [highScore, setHighScore] = useState<number>(0);
   const [suspensePetalId, setSuspensePetalId] = useState<string | null>(null);
   const [gameKey, setGameKey] = useState<number>(0);
-  const [userZoom, setUserZoom] = useState<number>(1.0);
+  const [difficulty, setDifficulty] = useState<number>(0);
   
-  const pinchRef = useRef<{ distance: number | null }>({ distance: null });
+  const pinchRef = useRef<{ distance: number | null, currentZoom: number }>({ distance: null, currentZoom: 1.0 });
+
+  // Initialize zoom CSS variable
+  useEffect(() => {
+    document.documentElement.style.setProperty('--user-zoom', '1.0');
+  }, []);
 
   // Load high score
   useEffect(() => {
@@ -22,19 +28,24 @@ export default function App() {
   }, []);
 
   const startNewGame = () => {
+    soundManager.play('START_GAME', 0.6);
     setGameState(GameState.PLAYING);
     setInteractionState(InteractionState.IDLE);
     setRings([]);
     setGameKey(prev => prev + 1); // Force Flower to unmount and remount clean
     setSuspensePetalId(null);
-    setUserZoom(1.0); // Reset zoom
+    
+    // Reset zoom
+    pinchRef.current.currentZoom = 1.0;
+    document.documentElement.style.setProperty('--user-zoom', '1.0');
+    
     addRing(0);
   };
 
   const addRing = (currentRingCount: number) => {
     const level = currentRingCount + 1;
     const { count, radius, petalSize } = getRingConfig(level);
-    const colors = generateRoundColors(level);
+    const colors = generateRoundColors(level, difficulty);
 
     const oddCount = Math.max(1, Math.floor(count * 0.1));
     const oddIndices = new Set<number>();
@@ -79,19 +90,29 @@ export default function App() {
     const petal = currentRing.petals.find(p => p.id === petalId);
     if (!petal) return;
 
+    soundManager.play('PETAL_CLICK', 0.4);
+    const wobbleSound = soundManager.playLoop('SUSPENSE_WOBBLE', 0.3);
+
     setSuspensePetalId(petalId);
     setInteractionState(InteractionState.SUSPENSE);
 
+    // Calculate total wobble duration: (cycle * (repeats + 1)) + return_to_center
+    const wobbleDuration = (ANIMATION_CONFIG.WOBBLE.DURATION * (ANIMATION_CONFIG.WOBBLE.REPEATS + 1)) + ANIMATION_CONFIG.WOBBLE.RETURN_DURATION;
+
     setTimeout(() => {
+      if (wobbleSound) {
+        gsap.to(wobbleSound, { volume: 0, duration: 0.3, onComplete: () => wobbleSound.pause() });
+      }
       if (petal.isOdd) {
         handleCorrectGuess(petalId);
       } else {
         handleWrongGuess();
       }
-    }, 2300);
+    }, wobbleDuration * 1000);
   }, [rings, interactionState]);
 
   const handleCorrectGuess = (petalId: string) => {
+    soundManager.playShepard('LEVEL_UP', rings.length, 0.25);
     setInteractionState(InteractionState.BLOOMING);
     setSuspensePetalId(null);
     
@@ -102,6 +123,7 @@ export default function App() {
   };
 
   const handleWrongGuess = () => {
+    soundManager.play('GAME_OVER', 0.5);
     setInteractionState(InteractionState.SCATTERING);
     setSuspensePetalId(null);
 
@@ -134,7 +156,9 @@ export default function App() {
     // Scroll up = Zoom In, Scroll down = Zoom Out
     const zoomSpeed = 0.0015;
     const delta = -e.deltaY * zoomSpeed;
-    setUserZoom(prev => Math.min(Math.max(0.1, prev + delta), 4.0));
+    const newZoom = Math.min(Math.max(0.1, pinchRef.current.currentZoom + delta), 4.0);
+    pinchRef.current.currentZoom = newZoom;
+    document.documentElement.style.setProperty('--user-zoom', newZoom.toString());
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -154,7 +178,9 @@ export default function App() {
       );
       
       const ratio = newDistance / pinchRef.current.distance;
-      setUserZoom(prev => Math.min(Math.max(0.1, prev * ratio), 4.0));
+      const newZoom = Math.min(Math.max(0.1, pinchRef.current.currentZoom * ratio), 4.0);
+      pinchRef.current.currentZoom = newZoom;
+      document.documentElement.style.setProperty('--user-zoom', newZoom.toString());
       pinchRef.current.distance = newDistance;
     }
   };
@@ -165,7 +191,7 @@ export default function App() {
 
   return (
     <div 
-      className="relative w-full h-full min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden bg-slate-50 transition-colors duration-1000"
+      className="relative w-full h-full min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden transition-colors duration-1000"
       onWheel={gameState === GameState.PLAYING ? handleWheel : undefined}
       onTouchStart={gameState === GameState.PLAYING ? handleTouchStart : undefined}
       onTouchMove={gameState === GameState.PLAYING ? handleTouchMove : undefined}
@@ -183,10 +209,27 @@ export default function App() {
             <div className="absolute inset-0 bg-rose-200 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
             <button 
               onClick={startNewGame}
+              onMouseEnter={() => soundManager.play('PETAL_HOVER', 0.2)}
               className="relative px-12 py-4 bg-white border border-slate-100 rounded-full shadow-lg text-slate-600 tracking-[0.15em] hover:scale-105 active:scale-95 transition-all duration-300"
             >
               BLOOM
             </button>
+          </div>
+
+          <div className="w-64 flex flex-col items-center space-y-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="flex justify-between w-full px-1">
+              <span className="text-[10px] text-slate-400 uppercase tracking-[0.2em]">Normal</span>
+              <span className="text-[10px] text-rose-400 uppercase tracking-[0.2em] font-medium">Girlfriend Mode</span>
+            </div>
+            <input 
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={difficulty}
+              onChange={(e) => setDifficulty(parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-400"
+            />
           </div>
 
           <div className="text-center">
@@ -218,15 +261,39 @@ export default function App() {
                onPetalClick={handlePetalClick}
                interactionState={interactionState}
                suspensePetalId={suspensePetalId}
-               userZoom={userZoom}
              />
           </div>
         </>
       )}
 
-      <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-indigo-50 rounded-full blur-3xl opacity-60" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[60vh] h-[60vh] bg-teal-50 rounded-full blur-3xl opacity-60" />
+      <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden bg-[#fafafa]">
+        <style>{`
+          @keyframes float-slow {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(10vw, -10vh) scale(1.1); }
+            66% { transform: translate(-5vw, 5vh) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+          }
+          @keyframes float-reverse {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-8vw, 12vh) scale(1.05); }
+            100% { transform: translate(0, 0) scale(1); }
+          }
+          .animate-float-slow { animation: float-slow 25s infinite ease-in-out; }
+          .animate-float-reverse { animation: float-reverse 30s infinite ease-in-out; }
+        `}</style>
+        
+        {/* Soft Moving Orbs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[80vh] h-[80vh] bg-rose-200/60 rounded-full blur-[80px] animate-float-slow will-change-transform" />
+        <div className="absolute bottom-[0%] right-[-5%] w-[90vh] h-[90vh] bg-indigo-200/50 rounded-full blur-[80px] animate-float-reverse will-change-transform" />
+        <div className="absolute top-[30%] left-[20%] w-[60vh] h-[60vh] bg-teal-100/70 rounded-full blur-[80px] animate-float-slow will-change-transform" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[70vh] h-[70vh] bg-amber-100/50 rounded-full blur-[80px] animate-float-reverse will-change-transform" />
+
+        {/* Liquid Glass Overlay */}
+        <div className="absolute inset-0 backdrop-blur-[80px] opacity-80" />
+        
+        {/* Subtle Paper Texture/Noise (Optional, but adds to the dreamlike feel) */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       </div>
 
     </div>
