@@ -31,13 +31,15 @@ interface FlowerProps {
   onPetalClick: (ringId: number, petalId: string) => void;
   interactionState: InteractionState;
   suspensePetalId: string | null;
+  userZoom?: number;
 }
 
 export const Flower: React.FC<FlowerProps> = ({ 
   rings, 
   onPetalClick, 
   interactionState,
-  suspensePetalId 
+  suspensePetalId,
+  userZoom = 1.0
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const ringsRef = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -137,8 +139,7 @@ export const Flower: React.FC<FlowerProps> = ({
     }
   }, [interactionState, suspensePetalId]);
 
-  // Dynamic scaling to keep flower on screen
-  // More aggressive dampening (0.15) to keep it smaller on screen as rings increase
+  // Dynamic auto-scaling logic
   const baseScale = useMemo(() => 
     Math.min(10.0, 1.5 / (0.7 + rings.length * 0.15)),
   [rings.length]);
@@ -176,94 +177,100 @@ export const Flower: React.FC<FlowerProps> = ({
         </svg>
       </div>
 
-      {/* Scaled Flower Content */}
+      {/* Manual Zoom Wrapper (No Transition for instant response) */}
       <div 
-        ref={containerRef}
-        className="relative flex items-center justify-center transition-transform duration-1000 ease-in-out z-10"
         style={{ 
-          width: '300px', 
-          height: '300px',
-          transform: `scale(${baseScale})`
+          transform: `scale(${userZoom})`,
+          transition: 'none', // Critical: Instant response to scroll/pinch
         }}
+        className="relative flex items-center justify-center"
       >
-        {/* The Center (Receptacle) */}
-        <div className="absolute w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-700 rounded-full z-[100] shadow-xl border-[6px] border-emerald-800/20 flex items-center justify-center">
-          <div className="w-16 h-16 bg-emerald-300/20 rounded-full blur-md" />
-        </div>
+        {/* Auto-Scaling Content (Has smooth transition for blooms) */}
+        <div 
+          ref={containerRef}
+          className="relative flex items-center justify-center transition-transform duration-1000 ease-in-out z-10"
+          style={{ 
+            width: '300px', 
+            height: '300px',
+            transform: `scale(${baseScale})`
+          }}
+        >
+          {/* The Center (Receptacle) */}
+          <div className="absolute w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-700 rounded-full z-[100] shadow-xl border-[6px] border-emerald-800/20 flex items-center justify-center">
+            <div className="w-16 h-16 bg-emerald-300/20 rounded-full blur-md" />
+          </div>
 
-        {rings.map((ring, ringIndex) => {
-          const isCurrentRing = ringIndex === rings.length - 1;
-          
-          // "Shrink in harder" logic:
-          // Inner rings scale down more as outer rings are added.
-          // This pulls them inward and makes them smaller, creating room for outer growth.
-          const ringsFromOutermost = rings.length - 1 - ringIndex;
-          const ringScale = Math.max(0.4, 1 - (ringsFromOutermost * 0.12));
-          
-          return (
-            <div 
-              key={ring.id}
-              ref={(el) => { if (el) ringsRef.current.set(ring.id, el); }}
-              className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-1000 ease-in-out"
-              style={{ 
-                zIndex: 90 - ringIndex,
-                // Apply the combined rotation and dynamic ring-specific scaling
-                transform: `rotate(${ring.rotationOffset}deg) scale(${ringScale})` 
-              }}
-            >
-              {ring.petals.map((petal) => {
-                const isSuspense = suspensePetalId === petal.id && interactionState === InteractionState.SUSPENSE;
-                
-                return (
-                  <button
-                    key={petal.id}
-                    className="petal-wrapper absolute origin-bottom cursor-pointer p-0 border-none bg-transparent"
-                    aria-label={`Petal ${petal.id} in ring ${ring.id}`}
-                    disabled={interactionState !== InteractionState.IDLE || !isCurrentRing}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (interactionState === InteractionState.IDLE && isCurrentRing) {
-                        onPetalClick(ring.id, petal.id);
-                      }
-                    }}
-                    style={{
-                      width: `${ring.petalSize}px`,
-                      height: `${ring.petalSize}px`, // Square for diamond shape
-                      left: `${-ring.petalSize / 2}px`,
-                      bottom: '0px',
-                      // Position wrapper: Rotate to angle, move out by radius
-                      transform: `rotate(${petal.angle}deg) translateY(-${ring.radius}px)`,
-                      pointerEvents: isCurrentRing ? 'auto' : 'none',
-                      willChange: 'transform, opacity' // Optimization hint
-                    }}
-                  >
-                    {/* Inner Petal Shape - Rotated Diamond */}
-                    <div
-                      ref={(el) => { if (el) petalRefs.current.set(petal.id, el); }}
-                      className={`
-                        w-full h-full
-                        transition-colors duration-300
-                        ${!isCurrentRing ? 'filter brightness-95' : ''}
-                      `}
+          {rings.map((ring, ringIndex) => {
+            const isCurrentRing = ringIndex === rings.length - 1;
+            
+            // "Shrink in harder" logic:
+            // Inner rings scale down more as outer rings are added.
+            const ringsFromOutermost = rings.length - 1 - ringIndex;
+            const ringScale = Math.max(0.4, 1 - (ringsFromOutermost * 0.12));
+            
+            return (
+              <div 
+                key={ring.id}
+                ref={(el) => { if (el) ringsRef.current.set(ring.id, el); }}
+                className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-1000 ease-in-out"
+                style={{ 
+                  zIndex: 90 - ringIndex,
+                  transform: `rotate(${ring.rotationOffset}deg) scale(${ringScale})` 
+                }}
+              >
+                {ring.petals.map((petal) => {
+                  const isSuspense = suspensePetalId === petal.id && interactionState === InteractionState.SUSPENSE;
+                  
+                  return (
+                    <button
+                      key={petal.id}
+                      className="petal-wrapper absolute origin-bottom cursor-pointer p-0 border-none bg-transparent"
+                      aria-label={`Petal ${petal.id} in ring ${ring.id}`}
+                      disabled={interactionState !== InteractionState.IDLE || !isCurrentRing}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (interactionState === InteractionState.IDLE && isCurrentRing) {
+                          onPetalClick(ring.id, petal.id);
+                        }
+                      }}
                       style={{
-                        backgroundColor: petal.color,
-                        // Pointy top-left corner will point straight out
-                        // Rounded slightly (12%) as per previous request
-                        borderRadius: '12% 100% 100% 100%', 
-                        // Rotate 45deg so the top-left corner (the point) faces UP (outwards)
-                        transform: 'rotate(45deg)', 
-                        boxShadow: 'inset 5px 5px 15px rgba(255,255,255,0.2), inset -5px -5px 15px rgba(0,0,0,0.05)',
+                        width: `${ring.petalSize}px`,
+                        height: `${ring.petalSize}px`, // Square for diamond shape
+                        left: `${-ring.petalSize / 2}px`,
+                        bottom: '0px',
+                        // Position wrapper: Rotate to angle, move out by radius
+                        transform: `rotate(${petal.angle}deg) translateY(-${ring.radius}px)`,
+                        pointerEvents: isCurrentRing ? 'auto' : 'none',
+                        willChange: 'transform, opacity' // Optimization hint
                       }}
                     >
-                      {/* Subtle spine line */}
-                      <div className="absolute top-0 left-0 w-[150%] h-[1px] bg-black/5 origin-top-left rotate-45 pointer-events-none" />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
+                      {/* Inner Petal Shape - Rotated Diamond */}
+                      <div
+                        ref={(el) => { if (el) petalRefs.current.set(petal.id, el); }}
+                        className={`
+                          w-full h-full
+                          transition-colors duration-300
+                          ${!isCurrentRing ? 'filter brightness-95' : ''}
+                        `}
+                        style={{
+                          backgroundColor: petal.color,
+                          // Pointy top-left corner will point straight out
+                          borderRadius: '12% 100% 100% 100%', 
+                          // Rotate 45deg so the top-left corner (the point) faces UP (outwards)
+                          transform: 'rotate(45deg)', 
+                          boxShadow: 'inset 5px 5px 15px rgba(255,255,255,0.2), inset -5px -5px 15px rgba(0,0,0,0.05)',
+                        }}
+                      >
+                        {/* Subtle spine line */}
+                        <div className="absolute top-0 left-0 w-[150%] h-[1px] bg-black/5 origin-top-left rotate-45 pointer-events-none" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

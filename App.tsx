@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, InteractionState, RingData, PetalData } from './types';
 import { generateRoundColors, getRingConfig } from './utils/gameLogic';
 import { Flower } from './components/Flower';
@@ -11,6 +11,9 @@ export default function App() {
   const [highScore, setHighScore] = useState<number>(0);
   const [suspensePetalId, setSuspensePetalId] = useState<string | null>(null);
   const [gameKey, setGameKey] = useState<number>(0);
+  const [userZoom, setUserZoom] = useState<number>(1.0);
+  
+  const pinchRef = useRef<{ distance: number | null }>({ distance: null });
 
   // Load high score
   useEffect(() => {
@@ -24,6 +27,7 @@ export default function App() {
     setRings([]);
     setGameKey(prev => prev + 1); // Force Flower to unmount and remount clean
     setSuspensePetalId(null);
+    setUserZoom(1.0); // Reset zoom
     addRing(0);
   };
 
@@ -109,7 +113,6 @@ export default function App() {
 
     // Wait for scatter animation, then fade out, then restart
     setTimeout(() => {
-      // Use GSAP to fade out the flower container before restarting
       const flowerContainer = document.querySelector('.flower-main-container');
       if (flowerContainer) {
         gsap.to(flowerContainer, {
@@ -126,8 +129,48 @@ export default function App() {
     }, 2500);
   };
 
+  // --- Zoom Handlers ---
+  const handleWheel = (e: React.WheelEvent) => {
+    // Scroll up = Zoom In, Scroll down = Zoom Out
+    const zoomSpeed = 0.0015;
+    const delta = -e.deltaY * zoomSpeed;
+    setUserZoom(prev => Math.min(Math.max(0.1, prev + delta), 4.0));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      pinchRef.current.distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current.distance !== null) {
+      const newDistance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      
+      const ratio = newDistance / pinchRef.current.distance;
+      setUserZoom(prev => Math.min(Math.max(0.1, prev * ratio), 4.0));
+      pinchRef.current.distance = newDistance;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    pinchRef.current.distance = null;
+  };
+
   return (
-    <div className="relative w-full h-full min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden bg-slate-50 transition-colors duration-1000">
+    <div 
+      className="relative w-full h-full min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden bg-slate-50 transition-colors duration-1000"
+      onWheel={gameState === GameState.PLAYING ? handleWheel : undefined}
+      onTouchStart={gameState === GameState.PLAYING ? handleTouchStart : undefined}
+      onTouchMove={gameState === GameState.PLAYING ? handleTouchMove : undefined}
+      onTouchEnd={handleTouchEnd}
+    >
       
       {gameState === GameState.HOME && (
         <div className="z-10 flex flex-col items-center animate-fade-in space-y-12">
@@ -175,6 +218,7 @@ export default function App() {
                onPetalClick={handlePetalClick}
                interactionState={interactionState}
                suspensePetalId={suspensePetalId}
+               userZoom={userZoom}
              />
           </div>
         </>
