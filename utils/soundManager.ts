@@ -3,6 +3,7 @@ const SOUNDS = {
   START_GAME: '/sounds/start_game.mp3',
   PETAL_HOVER: '/sounds/petal_hover.mp3',
   PETAL_CLICK: '/sounds/petal_click.mp3',
+  PETAL_POP: '/sounds/petal_pop.mp3',
   SUSPENSE_WOBBLE: '/sounds/suspense_wobble.mp3',
   LEVEL_UP: '/sounds/level_up.mp3',
   GAME_OVER: '/sounds/game_over.mp3',

@@ -53,8 +53,10 @@ function hslToHex(h: number, s: number, l: number): string {
 export const generateRoundColors = (level: number, difficultyBoost: number = 0): Colors => {
   // Random base pastel color
   const baseHue = Math.floor(Math.random() * 360);
-  const baseSat = Math.floor(Math.random() * 25) + 45; 
-  const baseLight = Math.floor(Math.random() * 15) + 70;
+  // Boosted saturation (from 45-69 to 60-85) to maintain vibrancy
+  const baseSat = Math.floor(Math.random() * 25) + 60; 
+  // Lowered lightness (from 70-84 to 60-75) to prevent blending with background
+  const baseLight = Math.floor(Math.random() * 15) + 60;
 
   // Calculate difficulty (hue shift)
   let shiftAmount = 15; // Ring 1
@@ -99,22 +101,20 @@ export const getRingConfig = (level: number) => {
   const count = Math.min(fibonacci(level + 5), 34); 
   
   // Calculate petal size: Grows larger as we go outwards
+  // Increased base and growth to ensure overlap at high levels (N=34)
   const basePetalSize = 64;
-  const sizeGrowthPerLevel = 10; 
+  const sizeGrowthPerLevel = 14; // Increased from 10
   const petalSize = basePetalSize + (level - 1) * sizeGrowthPerLevel;
 
   // Calculate radius: Rings go further out and stack less
-  // We calculate it cumulatively based on the size of previous petals
-  // Reduced starting radius (from 30 to 25) to keep it tighter to center
-  let radius = 25; 
+  let radius = 20; // Reduced from 25 to keep base tighter
   
-  // Visibility factor: How much of the petal is visible (not covered by previous ring)
-  // We use a tight visibility factor to ensure significant overlap, which prevents
-  // gaps from forming when inner rings are dynamically scaled down.
+  // Visibility factor: How much of the petal is visible
   for (let i = 1; i < level; i++) {
     const currentSize = basePetalSize + (i - 1) * sizeGrowthPerLevel;
+    // Tighter growth on visibility to keep petals packed
     const visibilityFactor = Math.min(
-      LAYOUT_CONFIG.BASE_VISIBILITY + (i * LAYOUT_CONFIG.VISIBILITY_GROWTH), 
+      LAYOUT_CONFIG.BASE_VISIBILITY + (i * (LAYOUT_CONFIG.VISIBILITY_GROWTH * 0.5)), 
       LAYOUT_CONFIG.MAX_VISIBILITY
     );
     radius += currentSize * visibilityFactor;

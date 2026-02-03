@@ -10,6 +10,7 @@ interface PetalProps {
   isCurrentRing: boolean;
   interactionState: InteractionState;
   onPetalClick: (ringId: number, petalId: string) => void;
+  onPetalHover: (angle: number) => void;
   suspensePetalId: string | null;
   petalRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
 }
@@ -20,6 +21,7 @@ const Petal = React.memo(({
   isCurrentRing, 
   interactionState, 
   onPetalClick, 
+  onPetalHover,
   suspensePetalId,
   petalRefs
 }: PetalProps) => {
@@ -30,7 +32,7 @@ const Petal = React.memo(({
       disabled={interactionState !== InteractionState.IDLE || !isCurrentRing}
       onMouseEnter={() => {
         if (interactionState === InteractionState.IDLE && isCurrentRing) {
-          soundManager.play('PETAL_HOVER', 0.15);
+          onPetalHover(petal.angle);
           
           const el = petalRefs.current.get(petal.id);
           if (el) {
@@ -48,6 +50,7 @@ const Petal = React.memo(({
       onClick={(e) => {
         e.stopPropagation();
         if (interactionState === InteractionState.IDLE && isCurrentRing) {
+          soundManager.play('PETAL_CLICK', 0.6);
           onPetalClick(ring.id, petal.id);
         }
       }}
@@ -90,6 +93,7 @@ interface RingProps {
   totalRings: number;
   interactionState: InteractionState;
   onPetalClick: (ringId: number, petalId: string) => void;
+  onPetalHover: (angle: number) => void;
   suspensePetalId: string | null;
   ringsRef: React.MutableRefObject<Map<number, HTMLDivElement>>;
   petalRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
@@ -101,6 +105,7 @@ const Ring = React.memo(({
   totalRings,
   interactionState,
   onPetalClick,
+  onPetalHover,
   suspensePetalId,
   ringsRef,
   petalRefs
@@ -133,6 +138,7 @@ const Ring = React.memo(({
           isCurrentRing={isCurrentRing}
           interactionState={interactionState}
           onPetalClick={onPetalClick}
+          onPetalHover={onPetalHover}
           suspensePetalId={suspensePetalId}
           petalRefs={petalRefs}
         />
@@ -157,6 +163,18 @@ export const Flower: React.FC<FlowerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const ringsRef = useRef<Map<number, HTMLDivElement>>(new Map());
   const petalRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const lastHoverTime = useRef<number>(0);
+
+  const handlePetalHover = React.useCallback((angle: number) => {
+    const now = Date.now();
+    // Throttle sound to once every 60ms for a smooth musical phrase
+    if (now - lastHoverTime.current > 60) {
+      lastHoverTime.current = now;
+      // Map angle to sine wave for deterministic musical pitch (0.7 to 1.3)
+      const pitch = 1.0 + 0.3 * Math.sin(angle * (Math.PI / 180));
+      soundManager.play('PETAL_HOVER', 0.12, pitch);
+    }
+  }, []);
 
   // Handle Bloom Animation
   useLayoutEffect(() => {
@@ -185,7 +203,13 @@ export const Flower: React.FC<FlowerProps> = ({
             scale: 1, 
             opacity: 1, 
             duration: ANIMATION_CONFIG.BLOOM.DURATION, 
-            stagger: staggerAmount, 
+            stagger: {
+              each: staggerAmount,
+              onStart: function() {
+                // Play pop sound for each petal as it starts its bloom animation
+                soundManager.play('PETAL_POP', 0.2, 0.8 + Math.random() * 0.4);
+              }
+            }, 
             ease: ANIMATION_CONFIG.BLOOM.EASE,
             force3D: true
           }
@@ -223,6 +247,9 @@ export const Flower: React.FC<FlowerProps> = ({
     if (interactionState === InteractionState.SUSPENSE && suspensePetalId) {
       const el = petalRefs.current.get(suspensePetalId);
       if (el) {
+        // Play suspense wobble sound
+        const suspenseSound = soundManager.playLoop('SUSPENSE_WOBBLE', 0.3);
+        
         const baseRotation = gsap.getProperty(el, "rotation") as number;
         const wobble = gsap.fromTo(el, 
           { rotation: baseRotation - ANIMATION_CONFIG.WOBBLE.ROTATION_OFFSET }, 
@@ -233,6 +260,13 @@ export const Flower: React.FC<FlowerProps> = ({
             repeat: ANIMATION_CONFIG.WOBBLE.REPEATS, 
             ease: ANIMATION_CONFIG.WOBBLE.EASE,
             onComplete: () => {
+              if (suspenseSound) {
+                gsap.to(suspenseSound, { 
+                  volume: 0, 
+                  duration: 0.5, 
+                  onComplete: () => suspenseSound.pause() 
+                });
+              }
               gsap.to(el, { 
                 rotation: baseRotation, 
                 duration: ANIMATION_CONFIG.WOBBLE.RETURN_DURATION, 
@@ -244,6 +278,9 @@ export const Flower: React.FC<FlowerProps> = ({
 
         return () => {
           wobble.kill();
+          if (suspenseSound) {
+            suspenseSound.pause();
+          }
           gsap.set(el, { rotation: baseRotation });
         };
       }
@@ -296,6 +333,7 @@ export const Flower: React.FC<FlowerProps> = ({
               totalRings={rings.length}
               interactionState={interactionState}
               onPetalClick={onPetalClick}
+              onPetalHover={handlePetalHover}
               suspensePetalId={suspensePetalId}
               ringsRef={ringsRef}
               petalRefs={petalRefs}

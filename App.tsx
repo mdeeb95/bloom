@@ -90,9 +90,15 @@ export default function App() {
     const petal = currentRing.petals.find(p => p.id === petalId);
     if (!petal) return;
 
-    soundManager.play('PETAL_CLICK', 0.4);
-    const wobbleSound = soundManager.playLoop('SUSPENSE_WOBBLE', 0.3);
-
+    // Sound is now handled in Flower.tsx via props or logic, 
+    // but handlePetalClick is the central logic hub.
+    // The previous implementation had soundManager.play('PETAL_CLICK', 0.4) here,
+    // and Flower.tsx also has it. Let's consolidate. 
+    // Flower.tsx onClick plays PETAL_CLICK.
+    
+    // We'll let Flower.tsx handle the PETAL_CLICK and SUSPENSE_WOBBLE
+    // to keep the view-driven sounds closer to the components.
+    
     setSuspensePetalId(petalId);
     setInteractionState(InteractionState.SUSPENSE);
 
@@ -100,9 +106,6 @@ export default function App() {
     const wobbleDuration = (ANIMATION_CONFIG.WOBBLE.DURATION * (ANIMATION_CONFIG.WOBBLE.REPEATS + 1)) + ANIMATION_CONFIG.WOBBLE.RETURN_DURATION;
 
     setTimeout(() => {
-      if (wobbleSound) {
-        gsap.to(wobbleSound, { volume: 0, duration: 0.3, onComplete: () => wobbleSound.pause() });
-      }
       if (petal.isOdd) {
         handleCorrectGuess(petalId);
       } else {
@@ -112,7 +115,7 @@ export default function App() {
   }, [rings, interactionState]);
 
   const handleCorrectGuess = (petalId: string) => {
-    soundManager.playShepard('LEVEL_UP', rings.length, 0.25);
+    soundManager.playShepard('LEVEL_UP', rings.length, 0.1);
     setInteractionState(InteractionState.BLOOMING);
     setSuspensePetalId(null);
     
