@@ -20,6 +20,8 @@ jobs:
         with:
           version: 4.3.0 # Match your Godot version
           use-dotnet: false
+          # Ensure export templates are included
+          include-templates: true
 
       - name: Export Web
         run: |
