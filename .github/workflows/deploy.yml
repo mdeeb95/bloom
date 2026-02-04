@@ -1,0 +1,40 @@
+name: "Publish to GitHub Pages"
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  export_web:
+    runs-on: ubuntu-latest
+    name: Export Web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0 # Match your Godot version
+          use-dotnet: false
+
+      - name: Export Web
+        run: |
+          mkdir -v -p build/web
+          godot --headless --path bloom_godot --export-release "Web" ../build/web/index.html
+
+      - name: Add COOP/COEP Headers for GitHub Pages
+        run: |
+          # This script adds a small workaround to enable SharedArrayBuffer on GitHub Pages
+          # which is required for Godot 4 web exports.
+          curl -fsSL https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.min.js -o build/web/coi-serviceworker.min.js
+          sed -i 's/<head>/<head><script src="coi-serviceworker.min.js"><\/script>/' build/web/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/web
+          branch: gh-pages

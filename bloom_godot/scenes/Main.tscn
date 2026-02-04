@@ -1,0 +1,135 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_m4i2n"]
+
+[node name="Main" type="Control" unique_id=413841422]
+script = ExtResource("1_m4i2n")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="." unique_id=1613820249]
+layer = -1
+
+[node name="ColorRect" type="ColorRect" parent="BackgroundLayer" unique_id=1787294383]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.952941, 0.952941, 0.952941, 1)
+
+[node name="StemContainer" type="Node2D" parent="." unique_id=1195230291]
+position = Vector2(400, 400)
+
+[node name="Stem" type="Line2D" parent="StemContainer" unique_id=2073984020]
+points = PackedVector2Array(0, 0, 20, 150, -20, 300, 10, 600, -10, 800)
+width = 12.0
+default_color = Color(0.0627451, 0.72549, 0.505882, 1)
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="Leaf1" type="Polygon2D" parent="StemContainer/Stem" unique_id=2072718155]
+position = Vector2(-12, 250)
+color = Color(0.203922, 0.827451, 0.6, 0.9)
+polygon = PackedVector2Array(0, 0, -48, -20, -68, 30, -38, 50)
+
+[node name="Leaf2" type="Polygon2D" parent="StemContainer/Stem" unique_id=338117551]
+position = Vector2(8, 450)
+color = Color(0.0627451, 0.72549, 0.505882, 0.9)
+polygon = PackedVector2Array(0, 0, 52, -20, 72, 30, 42, 50)
+
+[node name="GameLayer" type="Node2D" parent="." unique_id=266140123]
+position = Vector2(400, 400)
+
+[node name="Bud" type="Polygon2D" parent="GameLayer" unique_id=102646796]
+z_index = 100
+color = Color(0.0627451, 0.305882, 0.231373, 1)
+polygon = PackedVector2Array(0, -48, 18, -44, 34, -34, 44, -18, 48, 0, 44, 18, 34, 34, 18, 44, 0, 48, -18, 44, -34, 34, -44, 18, -48, 0, -44, -18, -34, -34, -18, -44)
+
+[node name="BudHighlight" type="Polygon2D" parent="GameLayer/Bud" unique_id=776556578]
+color = Color(1, 1, 1, 0.05)
+polygon = PackedVector2Array(0, -32, 12, -30, 22, 22, 30, 12, 32, 0, 30, -12, 22, -22, 12, -30, 0, -32, -12, -30, -22, -22, -30, -12, -32, 0, -30, 12, -22, 22, -12, 30)
+uv = PackedVector2Array(0, -32, 12, -30, 22, 22, 30, 12, 32, 0, 30, -12, 22, -22, 12, -30, 0, -32, -12, -30, -22, -22, -30, -12, -32, 0, -30, 12, -22, 22, -12, 30)
+
+[node name="UILayer" type="CanvasLayer" parent="." unique_id=118259623]
+
+[node name="StartScreen" type="Control" parent="UILayer" unique_id=1772844413]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="UILayer/StartScreen" unique_id=111673520]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -180.0
+offset_right = 100.0
+offset_bottom = -100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 72
+theme_override_colors/font_color = Color(0.2, 0.2, 0.2, 1)
+text = "Bloom"
+horizontal_alignment = 1
+
+[node name="Prompt" type="Label" parent="UILayer/StartScreen" unique_id=1113106066]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -90.0
+offset_right = 150.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.4, 0.4, 0.4, 1)
+text = "Click to Start"
+horizontal_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="UILayer" unique_id=843425814]
+visible = false
+offset_left = 30.0
+offset_top = 30.0
+offset_right = 130.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.2, 0.2, 0.2, 1)
+text = "Level: 1"
+
+[node name="MessageLabel" type="Label" parent="UILayer" unique_id=658241456]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -50.0
+offset_right = 200.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.2, 0.2, 0.2, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=5094429]

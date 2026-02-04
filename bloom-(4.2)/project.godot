@@ -1,0 +1,28 @@
+config_version=5
+
+[application]
+
+config/name="Bloom (4.2)"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.2", "Forward Plus")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=800
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.952941, 0.952941, 0.952941, 1)
+
+[autoload]
+
+GameLogic="*res://scripts/GameLogic.gd"
+SoundManager="*res://scripts/SoundManager.gd"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true

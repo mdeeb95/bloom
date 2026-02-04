@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c1j2k3l4m5n6p"]
+
+[ext_resource type="Script" path="res://scripts/TestLogic.gd" id="1_a2b3c"]
+
+[node name="TestLogic" type="Node"]
+script = ExtResource("1_a2b3c")
