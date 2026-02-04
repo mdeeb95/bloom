@@ -24,7 +24,9 @@ jobs:
       - name: Export Web
         run: |
           mkdir -v -p build/web
-          godot --headless --path bloom_godot --export-release "Web" ../build/web/index.html
+          # The path to the export preset must match what's in export_presets.cfg
+          # and the output path should be absolute or correctly relative to the project path
+          godot --headless --path bloom_godot --export-release "Web" "$GITHUB_WORKSPACE/build/web/index.html"
 
       - name: Add COOP/COEP Headers for GitHub Pages
         run: |
