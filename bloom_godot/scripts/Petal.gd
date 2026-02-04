@@ -70,16 +70,13 @@ func setup(p_id: String, p_angle: float, p_color: Color, p_size: float, p_radius
 		points[i] += offset
 		points[i] = points[i].rotated(deg_to_rad(135))
 	
-	# Fancy Shadow (multi-layer for softness)
-	for i in range(3):
-		var shadow = Polygon2D.new()
-		add_child(shadow)
-		move_child(shadow, 0)
-		shadow.polygon = points
-		# Decreasing opacity and increasing offset for softness
-		var alpha = 0.08 - (i * 0.02)
-		shadow.color = Color(0, 0, 0, alpha)
-		shadow.position = Vector2(0, side * (0.04 + i * 0.04))
+	# Single shadow layer for web performance
+	var shadow = Polygon2D.new()
+	add_child(shadow)
+	move_child(shadow, 0)
+	shadow.polygon = points
+	shadow.color = Color(0, 0, 0, 0.12)
+	shadow.position = Vector2(0, side * 0.08)
 	
 	polygon.polygon = points
 	polygon.color = base_color

@@ -51,8 +51,8 @@ func setup_background():
 		grad.set_color(0, orb_colors[i])
 		grad.set_color(1, Color(orb_colors[i], 0.0))
 		tex.gradient = grad
-		tex.width = 600
-		tex.height = 600
+		tex.width = 256
+		tex.height = 256
 		
 		orb.texture = tex
 		orb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -68,13 +68,20 @@ func setup_background():
 	# Add Noise Texture for grain
 	var noise_rect = TextureRect.new()
 	bg_rect.add_child(noise_rect)
-	noise_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Force full rect anchoring
+	noise_rect.anchor_right = 1.0
+	noise_rect.anchor_bottom = 1.0
+	noise_rect.offset_right = 0
+	noise_rect.offset_bottom = 0
+	noise_rect.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	noise_rect.grow_vertical = Control.GROW_DIRECTION_BOTH
+	
 	noise_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	noise_rect.modulate.a = 0.03
 	
 	var noise_tex = NoiseTexture2D.new()
-	noise_tex.width = 512
-	noise_tex.height = 512
+	noise_tex.width = 256
+	noise_tex.height = 256
 	noise_tex.seamless = true
 	var noise = FastNoiseLite.new()
 	noise.frequency = 0.5
